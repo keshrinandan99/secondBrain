@@ -50,6 +50,7 @@ const contentSchema = new mongoose.Schema({
     ref: "Users",
     required: true,
   },
+
 });
 export const Contents = mongoose.model("Contents", contentSchema);
 
