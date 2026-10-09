@@ -25,7 +25,7 @@ const tagSchema = new mongoose.Schema({
 });
 export const Tags = mongoose.model("Tags", tagSchema);
 //content
-export const contentTypes = ["image", "video", "article", "audio"];
+export const contentTypes = ["youtube" , "twitter" , "article" , "image" , "text" , "link"];
 const contentSchema = new mongoose.Schema({
   link: {
     type: String,

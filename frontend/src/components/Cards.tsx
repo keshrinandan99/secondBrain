@@ -1,5 +1,6 @@
-
-import { FileText, Share2, Trash2 } from "lucide-react";
+import { FileText, Share2, Trash2, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
+import { useEffect } from "react";
+import { YoutubeIcon, TwitterIcon } from "./icons";
 import {
   Card,
   CardAction,
@@ -14,17 +15,109 @@ interface CardsInterface {
   contents: string;
   tags?: string[];
   date: string;
-  links:string
+  links: string;
+  type: "youtube" | "twitter" | "article" | "image" | "text" | "link";
 }
 
-function Cards({ title, contents, tags, date,links }: CardsInterface) {
+function Cards({ title, contents, tags, date, links, type }: CardsInterface) {
+  useEffect(() => {
+    if (type === "twitter") {
+      // Dynamically load Twitter embed script
+      const script = document.createElement("script");
+      script.src = "https://platform.twitter.com/widgets.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, [type]);
+
+  const getIcon = () => {
+    switch (type) {
+      case "youtube":
+        return <YoutubeIcon size={16} className="text-muted-foreground" />;
+      case "twitter":
+        return <TwitterIcon size={16} className="text-muted-foreground" />;
+      case "image":
+        return <ImageIcon size={16} className="text-muted-foreground" />;
+      case "link":
+        return <LinkIcon size={16} className="text-muted-foreground" />;
+      default:
+        return <FileText size={16} className="text-muted-foreground" />;
+    }
+  };
+
+  const renderContent = () => {
+    switch (type) {
+      case "youtube": {
+        const ytMatch = links?.match(
+          /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/
+        );
+        const ytId = ytMatch ? ytMatch[1] : null;
+        return ytId ? (
+          <iframe
+            className="w-full aspect-video rounded-md"
+            src={`https://www.youtube.com/embed/${ytId}`}
+            title="YouTube video player"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <p className="text-sm text-muted-foreground">Invalid YouTube Link</p>
+        );
+      }
+      case "twitter":
+        return (
+          <div className="w-full h-full overflow-y-auto custom-scrollbar">
+            <blockquote className="twitter-tweet" data-theme="light">
+              <a href={links.replace("x.com", "twitter.com")}></a>
+            </blockquote>
+          </div>
+        );
+      case "image":
+        return (
+          <img
+            src={links || contents}
+            alt={title}
+            className="w-full h-full object-cover rounded-md"
+          />
+        );
+      case "link":
+        return (
+          <a
+            href={links}
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-500 hover:underline break-all text-sm"
+          >
+            {links || contents}
+          </a>
+        );
+      case "text":
+      case "article":
+      default: {
+        // Strip HTML if present and truncate to 60 words
+        const plainText = contents.replace(/<[^>]*>?/gm, "");
+        const words = plainText.split(/\s+/);
+        const truncated =
+          words.length > 60
+            ? words.slice(0, 60).join(" ") + "..."
+            : plainText;
+        return (
+          <p className="text-sm text-foreground whitespace-pre-wrap">
+            {truncated}
+          </p>
+        );
+      }
+    }
+  };
+
   return (
-    <Card className="w-72 min-h-64">
+    <Card className="w-72 h-96 flex flex-col">
       <CardHeader>
         <CardTitle>
           <div className="flex items-center gap-2">
-            <FileText size={16} className="text-muted-foreground" />
-            <span className="text-sm font-normal text-muted-foreground">
+            {getIcon()}
+            <span className="text-sm font-normal text-muted-foreground line-clamp-1">
               {title}
             </span>
           </div>
@@ -41,15 +134,12 @@ function Cards({ title, contents, tags, date,links }: CardsInterface) {
         </CardAction>
       </CardHeader>
 
-      <CardContent className="flex-1">
-        <div
-          className="prose prose-sm dark:prose-invert"
-          dangerouslySetInnerHTML={{ __html: contents }}
-        />
+      <CardContent className="flex-1 overflow-hidden">
+        {renderContent()}
       </CardContent>
 
       {tags && tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-(--card-spacing)">
+        <div className="flex flex-wrap gap-2 px-(--card-spacing) pt-2">
           {tags.map((tag) => (
             <span
               key={tag}
@@ -61,10 +151,8 @@ function Cards({ title, contents, tags, date,links }: CardsInterface) {
         </div>
       )}
 
-      <CardFooter>
-        <span className="text-xs text-muted-foreground">
-          Added on {date}
-        </span>
+      <CardFooter className="mt-auto pt-4 pb-(--card-spacing)">
+        <span className="text-xs text-muted-foreground">Added on {date}</span>
       </CardFooter>
     </Card>
   );
