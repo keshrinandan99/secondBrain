@@ -23,6 +23,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { BrainIcon } from "./icons";
 import { cn } from "@/lib/utils";
+import api from "@/lib/axios";
 
 export type AuthMode = "signin" | "signup";
 
@@ -120,8 +121,12 @@ export function AuthModal({
     setIsLoading(true);
 
     try {
-      // Simulate authentication request
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      const name=username.trim();
+      if(!isSignIn){
+        await api.post("/signup",{username:name,password});
+      }
+      const response=await api.post("/signin",{username:name,password});
+
 
       setSuccessMessage(
         isSignIn
@@ -129,13 +134,10 @@ export function AuthModal({
           : "Account created successfully! Signing you in..."
       );
 
-      const authData: AuthSuccessData = {
-        username: username.trim(),
-        token: `mock-token-${Date.now()}`,
-      };
+      
 
       setTimeout(() => {
-        onAuthSuccess?.(mode, authData);
+        onAuthSuccess?.(mode, {username:name,token:response.data.token});
         onClose();
       }, 700);
     } catch (err: unknown) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Buttons from "./components/Buttons";
 import Cards from "./components/Cards";
@@ -11,7 +11,8 @@ import { AppSidebar } from "./components/AppSidebar";
 import type { SidebarFilterType } from "./components/AppSidebar";
 import { SidebarProvider } from "./components/ui/sidebar";
 import LandingPage from "./components/LandingPage";
-
+import api from "./lib/axios";
+import { Spinner } from "./components/ui/spinner";
 interface CardItem {
   id: string;
   title: string;
@@ -22,36 +23,6 @@ interface CardItem {
   type: "youtube" | "twitter" | "article" | "image" | "text" | "link";
 }
 
-const INITIAL_CONTENTS: CardItem[] = [
-  {
-    id: "1",
-    title: "AI & ML Roadmap",
-    contents: "Foundational concepts in deep learning and transformers.",
-    tags: ["productivity", "react"],
-    date: "18th Aug 2026",
-    links: "https://www.youtube.com/watch?v=32uTT424Nx4&list=RD32uTT424Nx4&start_radio=1",
-    type: "youtube",
-  },
-  {
-    id: "2",
-    title: "Web3 & Tech Updates",
-    contents: "Exciting announcement regarding modern tech stacks.",
-    tags: ["productivity", "react"],
-    date: "18th Aug 2026",
-    links: "https://x.com/AbhinavXJ/status/2108505931634163771",
-    type: "twitter",
-  },
-  {
-    id: "3",
-    title: "Project Ideas & Brainstorming",
-    contents: "Building a personal Second Brain app to store knowledge and digital resources effectively.",
-    tags: ["productivity", "react"],
-    date: "18th Aug 2026",
-    links: "",
-    type: "text",
-  },
-];
-
 function App() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<string | null>(() => {
@@ -61,8 +32,43 @@ function App() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("signup");
-  const [contents, setContents] = useState<CardItem[]>(INITIAL_CONTENTS);
+  const [contents, setContents] = useState<CardItem[]>([]);
   const [selectedType, setSelectedType] = useState<SidebarFilterType>("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!currentUser) {
+      setContents([]);
+      setIsLoading(false);
+      return;
+    }
+    const fetchContent = async () => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const response = await api.get("/content");
+        const formattedContents: CardItem[] = response.data.contents.map(
+          (item: any) => ({
+            id: item._id,
+            title: item.title,
+            contents: item.link,
+            tags: item.tags.map((tag: any) => tag.title),
+            date: "",
+            links: item.link,
+            type: item.type,
+          }),
+        );
+        setContents(formattedContents);
+      } catch (error:any) {
+        console.error("Error fetching contents",error);
+        setError(error);
+      }finally{
+        setIsLoading(false);
+      }
+    };
+    fetchContent();
+  },[currentUser]);
 
   const handleOpenAuth = (mode: AuthMode = "signup") => {
     setAuthMode(mode);
@@ -94,18 +100,18 @@ function App() {
     }
   };
 
-  const handleAddContent = (newContent: CreateContentInput) => {
-    const item: CardItem = {
-      id: Date.now().toString(),
-      title: newContent.title,
-      contents: newContent.contents,
-      tags: newContent.tags,
-      date: newContent.date,
-      links: newContent.links,
-      type: newContent.type,
-    };
-    setContents((prev) => [item, ...prev]);
-  };
+   const handleAddContent = (newContent: CreateContentInput) => {
+  //   const item: CardItem = {
+  //     id: Date.now().toString(),
+  //     title: newContent.title,
+  //     contents: newContent.contents,
+  //     tags: newContent.tags,
+  //     date: newContent.date,
+  //     links: newContent.links,
+  //     type: newContent.type,
+  //   };
+  //   setContents((prev) => [item, ...prev]);
+ };
 
   const filteredContents = contents.filter((item) => {
     if (selectedType === "all") return true;
@@ -115,7 +121,7 @@ function App() {
 
   return (
     <Routes>
-      {/* Route: / (Landing Page) */}
+     
       <Route
         path="/"
         element={
@@ -160,7 +166,9 @@ function App() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-8 border-b border-border/60 mb-8">
                     <div>
                       <h2 className="text-2xl font-bold tracking-tight text-foreground capitalize">
-                        {selectedType === "all" ? "All Notes" : `${selectedType}s`}
+                        {selectedType === "all"
+                          ? "All Notes"
+                          : `${selectedType}s`}
                       </h2>
                       <p className="text-xs md:text-sm text-muted-foreground mt-1">
                         Manage and organize your curated digital knowledge.
@@ -176,7 +184,18 @@ function App() {
                   </div>
 
                   {/* Cards Grid */}
-                  {filteredContents.length > 0 ? (
+                  {isLoading?(
+                    
+                    <Spinner className="size-8"/>
+
+                  ):error?(
+          <p className="py-10 text-center text-destructive">
+      {error}
+  </p>
+                  ):
+                  
+                  
+                   filteredContents.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {filteredContents.map((card) => (
                         <Cards
@@ -196,7 +215,8 @@ function App() {
                         No items found for this category
                       </p>
                       <p className="text-sm text-muted-foreground mt-1 mb-4">
-                        Click the &ldquo;Add Content&rdquo; button above to create one.
+                        Click the &ldquo;Add Content&rdquo; button above to
+                        create one.
                       </p>
                     </div>
                   )}
@@ -213,7 +233,7 @@ function App() {
                 <ShareBrainModal
                   open={isShareModalOpen}
                   onClose={() => setIsShareModalOpen(false)}
-                  itemCount={contents.length}
+                  itemCount={contents!.length}
                 />
 
                 {/* Modal Auth Component */}
