@@ -100,18 +100,37 @@ function App() {
     }
   };
 
-   const handleAddContent = (newContent: CreateContentInput) => {
-  //   const item: CardItem = {
-  //     id: Date.now().toString(),
-  //     title: newContent.title,
-  //     contents: newContent.contents,
-  //     tags: newContent.tags,
-  //     date: newContent.date,
-  //     links: newContent.links,
-  //     type: newContent.type,
-  //   };
-  //   setContents((prev) => [item, ...prev]);
- };
+const handleAddContent = async (newContent: CreateContentInput) => {
+  try {
+    const response = await api.post("/content", {
+      title: newContent.title,
+      link: newContent.links,
+      type: newContent.type,
+      tags: newContent.tags,
+    });
+
+    const saved = response.data.content;
+
+    const item: CardItem = {
+      id: saved._id,
+      title: saved.title,
+      contents: saved.content ?? saved.link ?? "",
+      tags: saved.tags?.map((tag: any) =>
+        typeof tag === "string" ? tag : tag.title ?? tag.name ?? ""
+      ) ?? [],
+      date: saved.createdAt
+        ? new Date(saved.createdAt).toLocaleDateString()
+        : newContent.date,
+      links: saved.link ?? "",
+      type: saved.type,
+    };
+
+    setContents((prev) => [item, ...prev]);
+    setIsModalOpen(false);
+  } catch (err) {
+    console.error("Error creating content:", err);
+  }
+};
 
   const filteredContents = contents.filter((item) => {
     if (selectedType === "all") return true;
@@ -184,11 +203,11 @@ function App() {
                   </div>
 
                   {/* Cards Grid */}
-                  {isLoading?(
-                    
-                    <Spinner className="size-8"/>
-
-                  ):error?(
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-32">
+                      <Spinner className="size-8 text-primary" />
+                    </div>
+                  ) : error ? (
           <p className="py-10 text-center text-destructive">
       {error}
   </p>
