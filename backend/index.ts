@@ -10,6 +10,7 @@ app.use(cors());
 app.use(express.json());
 app.use(router);
 connectDb();
+app.get('/health', (req, res) => res.status(200).send('ok'));
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
